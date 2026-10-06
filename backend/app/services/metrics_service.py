@@ -3,11 +3,13 @@ from typing import List, Dict, Optional, Set
 from collections import defaultdict
 from app.models.schemas import FileMetrics, DirectoryMetrics, RepositoryMetrics, AuthorMetrics
 from app.services.git_service import GitService
+from app.services.cache_service import MetricsCache
 import os
 
 class MetricsService:
     def __init__(self):
         self.git_service = GitService()
+        self.cache = MetricsCache()
 
     def _get_commit_diff_stats(self, repo: git.Repo, commit: git.Commit) -> Dict[str, Dict[int, int]]:
         """Get added/removed lines for each file in a commit"""
@@ -72,6 +74,11 @@ class MetricsService:
 
     def get_file_metrics(self, repo_id: str, commit_hash: Optional[str] = None) -> List[Dict]:
         """Get metrics for all files"""
+        # Check cache first
+        cached = self.cache.get(repo_id, 'files')
+        if cached and not commit_hash:
+            return cached
+        
         repo = self.git_service.get_repo(repo_id)
         
         if commit_hash:
@@ -99,6 +106,10 @@ class MetricsService:
                 'growth': added - removed,
                 'churn': added + removed,
             })
+        
+        # Cache the result
+        if not commit_hash:
+            self.cache.set(repo_id, 'files', result)
         
         return result
 

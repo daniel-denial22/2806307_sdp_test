@@ -6,6 +6,7 @@ import tempfile
 from typing import List, Dict, Optional
 from fastapi import UploadFile
 from app.models.schemas import CommitInfo, RepoInfo
+from app.services.cache_service import MetricsCache
 import uuid
 
 class GitService:
@@ -108,6 +109,10 @@ class GitService:
         repo_path = os.path.join(self.repos_dir, repo_id)
         if os.path.exists(repo_path):
             shutil.rmtree(repo_path)
+        
+        # Invalidate cache
+        cache = MetricsCache()
+        cache.invalidate(repo_id)
 
     def get_repo(self, repo_id: str) -> git.Repo:
         """Get git.Repo object"""
