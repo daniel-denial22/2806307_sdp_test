@@ -29,7 +29,7 @@ class MetricsService:
                 stats[path] = {'added': 0, 'removed': 0}
             
             # Count line changes
-            diff_text = d.diff.decode('utf-8', errors='ignore')
+            diff_text = d.diff if isinstance(d.diff, str) else d.diff.decode('utf-8', errors='ignore')
             for line in diff_text.split('\n'):
                 if line.startswith('+') and not line.startswith('+++'):
                     stats[path]['added'] += 1
