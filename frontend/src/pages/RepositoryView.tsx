@@ -54,21 +54,21 @@ const RepositoryView: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="loading">Loading repository data...</div>;
+    return <div className="loading"> Loading repository data...</div>;
   }
 
   if (error || !repo) {
-    return <div className="error-message">{error || 'Repository not found'}</div>;
+    return <div className="error-message">❌ {error || 'Repository not found'}</div>;
   }
 
   return (
     <div className="repository-view">
       <div className="repo-header">
-        <h1>{repo.name}</h1>
+        <h1>📊 {repo.name}</h1>
         <div className="repo-info">
-          {repo.total_commits !== undefined && <span>Commits: {repo.total_commits}</span>}
-          {repo.total_files !== undefined && <span>Files: {repo.total_files}</span>}
-          {repo.total_authors !== undefined && <span>Authors: {repo.total_authors}</span>}
+          {repo.total_commits !== undefined && <span>📝 {repo.total_commits.toLocaleString()} commits</span>}
+          {repo.total_files !== undefined && <span>📄 {repo.total_files.toLocaleString()} files</span>}
+          {repo.total_authors !== undefined && <span> {repo.total_authors.toLocaleString()} authors</span>}
         </div>
       </div>
 
@@ -77,25 +77,25 @@ const RepositoryView: React.FC = () => {
           className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
           onClick={() => setActiveTab('overview')}
         >
-          Overview
+           Overview
         </button>
         <button
           className={`tab ${activeTab === 'files' ? 'active' : ''}`}
           onClick={() => setActiveTab('files')}
         >
-          Files
+          📄 Files
         </button>
         <button
           className={`tab ${activeTab === 'directories' ? 'active' : ''}`}
           onClick={() => setActiveTab('directories')}
         >
-          Directories
+          📁 Directories
         </button>
         <button
           className={`tab ${activeTab === 'authors' ? 'active' : ''}`}
           onClick={() => setActiveTab('authors')}
         >
-          Authors
+          👥 Authors
         </button>
       </div>
 
@@ -104,23 +104,23 @@ const RepositoryView: React.FC = () => {
           <h2>Repository Overview</h2>
           <div className="metrics-grid">
             <div className="metric-card">
-              <div className="metric-value">{repoMetrics.added_lines}</div>
+              <div className="metric-value">{repoMetrics.added_lines.toLocaleString()}</div>
               <div className="metric-label">Lines Added</div>
             </div>
             <div className="metric-card">
-              <div className="metric-value">{repoMetrics.removed_lines}</div>
+              <div className="metric-value">{repoMetrics.removed_lines.toLocaleString()}</div>
               <div className="metric-label">Lines Removed</div>
             </div>
             <div className="metric-card">
-              <div className="metric-value">{repoMetrics.growth}</div>
+              <div className="metric-value">{repoMetrics.growth.toLocaleString()}</div>
               <div className="metric-label">Net Growth</div>
             </div>
             <div className="metric-card">
-              <div className="metric-value">{repoMetrics.churn}</div>
+              <div className="metric-value">{repoMetrics.churn.toLocaleString()}</div>
               <div className="metric-label">Total Churn</div>
             </div>
             <div className="metric-card">
-              <div className="metric-value">{repoMetrics.total_files}</div>
+              <div className="metric-value">{repoMetrics.total_files.toLocaleString()}</div>
               <div className="metric-label">Files Modified</div>
             </div>
           </div>
@@ -129,7 +129,7 @@ const RepositoryView: React.FC = () => {
 
       {activeTab === 'files' && (
         <div className="metrics-section">
-          <h2>File Metrics</h2>
+          <h2>📄 File Metrics</h2>
           <table className="metrics-table">
             <thead>
               <tr>
@@ -144,10 +144,10 @@ const RepositoryView: React.FC = () => {
               {fileMetrics.map((file) => (
                 <tr key={file.path}>
                   <td>{file.path}</td>
-                  <td>{file.added_lines}</td>
-                  <td>{file.removed_lines}</td>
-                  <td>{file.growth}</td>
-                  <td>{file.churn}</td>
+                  <td>{file.added_lines.toLocaleString()}</td>
+                  <td>{file.removed_lines.toLocaleString()}</td>
+                  <td>{file.growth.toLocaleString()}</td>
+                  <td>{file.churn.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -157,7 +157,7 @@ const RepositoryView: React.FC = () => {
 
       {activeTab === 'directories' && (
         <div className="metrics-section">
-          <h2>Directory Metrics</h2>
+          <h2>📁 Directory Metrics</h2>
           <table className="metrics-table">
             <thead>
               <tr>
@@ -171,11 +171,11 @@ const RepositoryView: React.FC = () => {
             <tbody>
               {dirMetrics.map((dir) => (
                 <tr key={dir.path}>
-                  <td>{dir.path}</td>
-                  <td>{dir.added_lines}</td>
-                  <td>{dir.removed_lines}</td>
-                  <td>{dir.growth}</td>
-                  <td>{dir.churn}</td>
+                  <td>{dir.path || '/'}</td>
+                  <td>{dir.added_lines.toLocaleString()}</td>
+                  <td>{dir.removed_lines.toLocaleString()}</td>
+                  <td>{dir.growth.toLocaleString()}</td>
+                  <td>{dir.churn.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -185,7 +185,7 @@ const RepositoryView: React.FC = () => {
 
       {activeTab === 'authors' && (
         <div className="metrics-section">
-          <h2>Author Metrics</h2>
+          <h2> Author Metrics</h2>
           <table className="metrics-table">
             <thead>
               <tr>
@@ -200,8 +200,8 @@ const RepositoryView: React.FC = () => {
                 <tr key={author.email}>
                   <td>{author.author}</td>
                   <td>{author.email}</td>
-                  <td>{author.modifications}</td>
-                  <td>{author.churn}</td>
+                  <td>{author.modifications.toLocaleString()}</td>
+                  <td>{author.churn.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

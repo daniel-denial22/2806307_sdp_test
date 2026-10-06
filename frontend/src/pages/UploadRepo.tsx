@@ -19,7 +19,7 @@ const UploadRepo: React.FC = () => {
       setError(null);
       setSuccess(null);
       const response = await repoApi.clone(cloneUrl);
-      setSuccess('Repository cloned successfully! Redirecting...');
+      setSuccess('✅ Repository cloned successfully! Redirecting...');
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
       console.error('Clone error:', err);
@@ -38,7 +38,7 @@ const UploadRepo: React.FC = () => {
       setError(null);
       setSuccess(null);
       const response = await repoApi.upload(zipFile);
-      setSuccess('Repository uploaded successfully! Redirecting...');
+      setSuccess('✅ Repository uploaded successfully! Redirecting...');
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -50,13 +50,13 @@ const UploadRepo: React.FC = () => {
 
   return (
     <div className="upload-page">
-      <h1>Add Repository</h1>
+      <h1>🚀 Add Repository</h1>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && <div className="error-message">❌ {error}</div>}
       {success && <div className="success-message">{success}</div>}
 
       <div className="upload-section">
-        <h2>Clone from URL</h2>
+        <h2>📥 Clone from URL</h2>
         <form onSubmit={handleClone}>
           <div className="form-group">
             <label>Repository URL</label>
@@ -69,13 +69,13 @@ const UploadRepo: React.FC = () => {
             />
           </div>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Cloning...' : 'Clone Repository'}
+            {loading ? '⏳ Cloning...' : ' Clone Repository'}
           </button>
         </form>
       </div>
 
       <div className="upload-section">
-        <h2>Upload ZIP File</h2>
+        <h2>📤 Upload ZIP File</h2>
         <form onSubmit={handleUpload}>
           <div className="form-group">
             <label>ZIP File (must contain .git directory)</label>
@@ -87,7 +87,7 @@ const UploadRepo: React.FC = () => {
             />
           </div>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Uploading...' : 'Upload Repository'}
+            {loading ? '⏳ Uploading...' : '📤 Upload Repository'}
           </button>
         </form>
       </div>

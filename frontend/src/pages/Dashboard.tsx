@@ -46,14 +46,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <h1>Repository Dashboard</h1>
+      <h1>📊 Repository Dashboard</h1>
       
       {error && <div className="error-message">{error}</div>}
       
       {repositories.length === 0 ? (
         <div className="empty-state">
           <h2>No repositories yet</h2>
-          <p>Upload or clone a repository to get started</p>
+          <p>Upload or clone a repository to get started with analysis</p>
         </div>
       ) : (
         <div className="repo-grid">
@@ -63,16 +63,16 @@ const Dashboard: React.FC = () => {
               className="repo-card"
               onClick={() => handleRepoClick(repo.id)}
             >
-              <h3>{repo.name}</h3>
+              <h3>📁 {repo.name}</h3>
               <div className="repo-stats">
                 {repo.total_commits !== undefined && (
-                  <span>Commits: {repo.total_commits}</span>
+                  <span>📝 Commits: {repo.total_commits.toLocaleString()}</span>
                 )}
                 {repo.total_files !== undefined && (
-                  <span>Files: {repo.total_files}</span>
+                  <span>📄 Files: {repo.total_files.toLocaleString()}</span>
                 )}
                 {repo.total_authors !== undefined && (
-                  <span>Authors: {repo.total_authors}</span>
+                  <span>👥 Authors: {repo.total_authors.toLocaleString()}</span>
                 )}
               </div>
             </div>
