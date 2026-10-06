@@ -1,118 +1,77 @@
 # Repo Analysis Tool (RAT)
 
-A web dashboard for analyzing Git repositories and visualizing code metrics.
+This is my submission for the SDP test. It's a web app where you give it a git
+repository (either clone it from a URL or upload a zip) and it reports metrics
+about the code: lines added/removed per file, growth and churn, rollups per
+directory, per-author stats, and a few charts showing how the repo changed
+over time.
 
-## Features
+The backend is FastAPI in Python, the frontend is React with TypeScript on
+Vite.
 
-- **Repository Input**: Upload ZIP files or clone from URLs
-- **File Metrics**: Track added/removed lines, growth, and churn per file
-- **Directory Metrics**: Aggregate metrics for directories
-- **Repository Metrics**: Overall repository statistics
-- **Author Metrics**: Track contributions per developer
-- **Commit Set Metrics**: Analyze specific time periods or commit ranges
-- **Author Merging**: Support for .mailmap files
-- **Multiple Repository Support**: Manage multiple repos in one dashboard
+## What you need
 
-## Tech Stack
+- Python 3 with pip (I developed on 3.12, anything 3.10+ should be fine)
+- Node.js and npm (I'm on Node 18)
+- git on your PATH, the backend shells out to it when cloning
 
-### Backend
-- **FastAPI** - Modern Python web framework
-- **GitPython** - Git repository operations
-- **Pydantic** - Data validation
+## How to run
 
-### Frontend
-- **React** with TypeScript
-- **Vite** - Fast build tool
-- **React Router** - Navigation
-- **Recharts** - Data visualization
-- **Axios** - HTTP client
+Install the dependencies once:
 
-## Project Structure
+    cd backend
+    pip install -r requirements.txt
+    cd ../frontend
+    npm install
+    cd ..
 
-```
-2806307_sdp_test/
-├── backend/
-│   ├── app/
-│   │   ├── api/          # API routes
-│   │   ├── models/       # Data models
-│   │   ├── services/     # Business logic
-│   │   └── main.py       # FastAPI app
-│   ├── requirements.txt
-│   └── README.md
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # Reusable components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API calls
-│   │   └── App.tsx
-│   ├── package.json
-│   └── vite.config.ts
-└── README.md
-```
+After that the easiest way is the script in the repo root:
 
-## Setup Instructions
+    ./start.sh
 
-### Backend Setup
+It brings up both servers and prints the URLs, Ctrl+C stops both of them.
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+If you'd rather run them separately, open two terminals:
 
-API will be available at http://localhost:8000
-API documentation at http://localhost:8000/docs
+    # terminal 1, backend on port 8000
+    cd backend
+    uvicorn app.main:app --host 0.0.0.0 --port 8000
 
-### Frontend Setup
+    # terminal 2, frontend on port 5173
+    cd frontend
+    npm run dev
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Then open http://localhost:5173 in a browser. The API itself lives on
+http://localhost:8000, and http://localhost:8000/docs has a swagger page which
+is handy if you want to poke at the endpoints without the UI.
 
-Frontend will be available at http://localhost:5173
+## Using it
 
-## Usage
+1. On the upload page paste the URL of a public repo and hit clone, or upload
+   a zip of one. Cloning takes a few seconds on bigger repos.
+2. The repo then shows up as a card on the dashboard, click it.
+3. You get tables and charts for file, directory, author and whole-repo
+   metrics.
 
-1. Start the backend server
-2. Start the frontend development server
-3. Open http://localhost:5173 in your browser
-4. Upload a repository (ZIP) or clone from URL
-5. View metrics in the dashboard
+## A few notes
 
-## Metrics Explained
+- Cloned repos are kept under backend/repos/ and computed metrics are cached
+  as json in backend/cache/, so reopening a repo you already analysed is
+  instant. Delete those two folders if you want everything recomputed from
+  scratch.
+- If you change backend code and it doesn't seem to take effect, kill uvicorn
+  and start it again, --reload misses things now and then.
+- Built and tested on Ubuntu 24.04.
 
-### File Metrics
-- **Added Lines**: Lines added to the file
-- **Removed Lines**: Lines removed from the file
-- **Growth**: Net change (added - removed)
-- **Churn**: Total activity (added + removed)
+## Metric definitions
 
-### Directory Metrics
-- Aggregated metrics for all files and subdirectories
+- churn = lines added + lines removed
+- growth = lines added - lines removed
+- author ownership = that author's share of all changes to a file
+- merge commits are excluded from all of the above
 
-### Repository Metrics
-- Overall statistics for the entire repository
+## Layout
 
-### Author Metrics
-- **Modifications**: Number of commits that touched files
-- **Churn**: Total lines changed by the author
-- **Ownership**: Percentage of changes per file
-
-## Development
-
-### Running Tests
-```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests
-cd frontend
-npm test
-```
-
-## License
-
-MIT
+    backend/    FastAPI app, app/api has the routes and app/services the metric logic
+    frontend/   React app, src/pages and src/components
+    start.sh    starts both servers
