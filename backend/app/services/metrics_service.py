@@ -79,9 +79,10 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> Dict:
         """Single pass over the commit set producing every metric table."""
-        default_set = not (start_time or end_time or commit_hashes)
+        default_set = not (start_time or end_time or commit_hashes or author)
         if default_set:
             cached = self.cache.get(repo_id, f"bundle_{CACHE_V}")
             if cached:
@@ -134,7 +135,11 @@ class MetricsService:
                     current = None  # commit outside the requested set
                     continue
                 name, email = self._apply_mailmap(repo, name, email)
-                current = f"{name} <{email}>"
+                key = f"{name} <{email}>"
+                if author is not None and key != author:
+                    current = None  # commit by another author
+                    continue
+                current = key
                 commit_count += 1
                 continue
             if not line.strip() or current is None:
@@ -152,10 +157,10 @@ class MetricsService:
             f["added"] += added
             f["removed"] += removed
 
-            author = authors[current]
-            author["added"] += added
-            author["removed"] += removed
-            author["file_churn"][path] += added + removed
+            author_agg = authors[current]
+            author_agg["added"] += added
+            author_agg["removed"] += removed
+            author_agg["file_churn"][path] += added + removed
 
             # Zero-line entries (pure renames) create the file entry but
             # do not count as modifications anywhere.
@@ -258,9 +263,10 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all files"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["files"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["files"]
 
     def get_directory_metrics(
         self,
@@ -268,9 +274,10 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all directories"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["directories"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["directories"]
 
     def get_repository_metrics(
         self,
@@ -278,9 +285,10 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> Dict:
         """Get metrics for the entire repository"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["repository"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["repository"]
 
     def get_author_metrics(
         self,
@@ -288,9 +296,10 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all authors"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["authors"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["authors"]
 
     def get_commit_set_metrics(
         self,
@@ -298,7 +307,8 @@ class MetricsService:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
     ) -> Dict:
         """Get metrics for a specific commit set"""
-        repo_row = self._aggregate(repo_id, start_time, end_time, commit_hashes)["repository"]
+        repo_row = self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["repository"]
         return {**repo_row, "files_modified": repo_row["total_files"]}

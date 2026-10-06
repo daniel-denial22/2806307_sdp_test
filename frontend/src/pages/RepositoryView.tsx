@@ -29,6 +29,8 @@ const RepositoryView: React.FC = () => {
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [draftCommits, setDraftCommits] = useState<string[]>([]);
   const [commitSearch, setCommitSearch] = useState('');
+  const [draftAuthor, setDraftAuthor] = useState('');
+  const [authorOptions, setAuthorOptions] = useState<AuthorMetric[]>([]);
 
   useEffect(() => {
     if (repoId) {
@@ -54,6 +56,9 @@ const RepositoryView: React.FC = () => {
       setFileMetrics(filesRes.data.metrics);
       setDirMetrics(dirsRes.data.metrics);
       setAuthorMetrics(authorsRes.data.metrics);
+      if (!f.author) {
+        setAuthorOptions(authorsRes.data.metrics);
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load repository data');
       console.error(err);
@@ -70,6 +75,7 @@ const RepositoryView: React.FC = () => {
       start_time: toUnix(draftFrom),
       end_time: toUnix(draftTo),
       commits: draftCommits.length ? draftCommits : undefined,
+      author: draftAuthor || undefined,
     };
     setFilters(next);
     setCommitPickerOpen(false);
@@ -80,6 +86,7 @@ const RepositoryView: React.FC = () => {
     setDraftFrom('');
     setDraftTo('');
     setDraftCommits([]);
+    setDraftAuthor('');
     setFilters({});
     loadData({});
   };
@@ -112,6 +119,7 @@ const RepositoryView: React.FC = () => {
   );
 
   const filterSummary = [
+    filters.author ? `author ${filters.author}` : null,
     filters.start_time ? `from ${new Date(filters.start_time * 1000).toLocaleDateString()}` : null,
     filters.end_time ? `to ${new Date(filters.end_time * 1000).toLocaleDateString()}` : null,
     filters.commits?.length ? `${filters.commits.length} selected commits` : null,
@@ -156,6 +164,21 @@ const RepositoryView: React.FC = () => {
             value={draftTo}
             onChange={(e) => setDraftTo(e.target.value)}
           />
+        </div>
+        <div className="filter-group">
+          <label htmlFor="filter-author">Author</label>
+          <select
+            id="filter-author"
+            value={draftAuthor}
+            onChange={(e) => setDraftAuthor(e.target.value)}
+          >
+            <option value="">All authors</option>
+            {authorOptions.map((a) => (
+              <option key={`${a.author} <${a.email}>`} value={`${a.author} <${a.email}>`}>
+                {a.author} &lt;{a.email}&gt;
+              </option>
+            ))}
+          </select>
         </div>
         <button className="filter-btn" onClick={openCommitPicker}>
           🔀 Commits{filters.commits?.length ? ` (${filters.commits.length})` : ''}

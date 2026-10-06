@@ -524,12 +524,15 @@ body {
   color: #555;
 }
 
-.filter-group input {
+.filter-group input,
+.filter-group select {
   padding: 0.5rem 0.75rem;
   border: 1px solid #d5d9e2;
   border-radius: 8px;
   font-size: 0.9rem;
   color: #333;
+  background: white;
+  max-width: 280px;
 }
 
 .filter-btn {

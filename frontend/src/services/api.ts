@@ -86,12 +86,14 @@ export interface MetricFilters {
   start_time?: number;
   end_time?: number;
   commits?: string[];
+  author?: string;
 }
 
 const filterParams = (f?: MetricFilters) => ({
   start_time: f?.start_time,
   end_time: f?.end_time,
   commit_hashes: f?.commits?.length ? f.commits.join(',') : undefined,
+  author: f?.author,
 });
 
 // Repository APIs
