@@ -18,17 +18,7 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const response = await repoApi.list();
-      const reposWithData = await Promise.all(
-        response.data.repositories.map(async (repo) => {
-          try {
-            const info = await repoApi.get(repo.id);
-            return info.data;
-          } catch {
-            return repo;
-          }
-        })
-      );
-      setRepositories(reposWithData);
+      setRepositories(response.data.repositories);
       setError(null);
     } catch (err) {
       setError('Failed to load repositories');

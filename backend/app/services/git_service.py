@@ -68,51 +68,49 @@ class GitService:
             raise ValueError(f"Failed to clone repository: {str(e)}")
 
     def list_repositories(self) -> List[Dict]:
-        """List all repositories"""
+        """List repositories with cached summary information."""
         repos = []
         if os.path.exists(self.repos_dir):
             for repo_id in os.listdir(self.repos_dir):
                 repo_path = os.path.join(self.repos_dir, repo_id)
-                if os.path.isdir(repo_path):
-                    try:
-                        repo = git.Repo(repo_path)
-                        repos.append({
-                            "id": repo_id,
-                            "name": os.path.basename(repo.remotes.origin.url) if repo.remotes else repo_id,
-                            "path": repo_path,
-                        })
-                    except:
-                        pass
+                if not os.path.isdir(repo_path):
+                    continue
+                info = self.get_repository_info(repo_id)
+                if info:
+                    repos.append(info)
         return repos
 
     def get_repository_info(self, repo_id: str) -> Optional[Dict]:
-        """Get repository information"""
+        """Get repository information using Git's native commands and cache it."""
         repo_path = os.path.join(self.repos_dir, repo_id)
         if not os.path.exists(repo_path):
             return None
-        
+
         try:
             repo = git.Repo(repo_path)
-            commits = list(repo.iter_commits('HEAD'))
-            # Merge commits are excluded from the analysed commit set
-            non_merge = [c for c in commits if len(c.parents) <= 1]
-            authors = set(f"{c.author.name} <{c.author.email}" for c in non_merge)
-            
-            # Count files
-            files = []
-            for item in repo.tree().traverse():
-                if item.type == 'blob':
-                    files.append(item.path)
-            
-            return {
+            head_sha = repo.head.commit.hexsha
+            cache = MetricsCache()
+            cached = cache.get(repo_id, "repo_info_v1")
+            if cached and cached.get("_head_sha") == head_sha:
+                return {k: v for k, v in cached.items() if not k.startswith("_")}
+
+            # Native git commands avoid constructing tens of thousands of
+            # Commit/Tree Python objects for large repositories.
+            total_commits = int(repo.git.rev_list("--count", "--no-merges", "HEAD"))
+            total_files = len(repo.git.ls_tree("-r", "--name-only", "HEAD").splitlines())
+            author_lines = repo.git.shortlog("-sne", "--no-merges", "HEAD").splitlines()
+
+            info = {
                 "id": repo_id,
                 "name": os.path.basename(repo.remotes.origin.url) if repo.remotes else repo_id,
                 "path": repo_path,
-                "total_commits": len(non_merge),
-                "total_files": len(files),
-                "total_authors": len(authors),
+                "total_commits": total_commits,
+                "total_files": total_files,
+                "total_authors": len(author_lines),
             }
-        except Exception as e:
+            cache.set(repo_id, "repo_info_v1", {**info, "_head_sha": head_sha})
+            return info
+        except Exception:
             return None
 
     def delete_repository(self, repo_id: str):

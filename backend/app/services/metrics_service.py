@@ -7,7 +7,7 @@ from app.services.cache_service import MetricsCache
 
 # Bump this suffix whenever the aggregation semantics change so stale
 # cache entries from older versions are ignored.
-CACHE_V = "v2"
+CACHE_V = "v3"
 
 MERGE_METRIC = "author_merge"
 
@@ -114,8 +114,10 @@ class MetricsService:
             args += ["--no-walk"] + list(commit_hashes)
         # Time bounds are enforced in the parser below so the set matches
         # H_i,j = {h | i <= h[committer-date] < j} exactly.
-        pretty = "--pretty=format:\x1f%H\x1f%an\x1f%ae\x1f%ct"
-        raw = repo.git.log(*args, "--numstat", pretty)
+        # %aN/%aE delegates all valid .mailmap formats to Git itself instead
+        # of reopening and reparsing .mailmap once for every commit.
+        pretty = "--pretty=format:\x1f%H\x1f%aN\x1f%aE\x1f%ct"
+        raw = repo.git.log(*args, "--find-renames=50%", "--numstat", pretty)
 
         files: Dict[str, Dict] = defaultdict(lambda: {"added": 0, "removed": 0, "modifications": 0})
         dirs: Dict[str, Dict] = defaultdict(lambda: {"added": 0, "removed": 0, "modifications": 0})
@@ -151,7 +153,6 @@ class MetricsService:
                 ):
                     current = None  # commit outside the requested set
                     continue
-                name, email = self._apply_mailmap(repo, name, email)
                 key = f"{name} <{email}>"
                 key = merges.get(key, key)
                 if author is not None and key != author:

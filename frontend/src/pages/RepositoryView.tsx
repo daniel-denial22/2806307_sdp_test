@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   repoApi,
   metricsApi,
@@ -16,6 +16,7 @@ import { TopChurnBar, AddedRemovedBar, OwnershipPie } from '../components/Metric
 
 const RepositoryView: React.FC = () => {
   const { repoId } = useParams<{ repoId: string }>();
+  const navigate = useNavigate();
   const [repo, setRepo] = useState<Repository | null>(null);
   const [repoMetrics, setRepoMetrics] = useState<RepositoryMetrics | null>(null);
   const [fileMetrics, setFileMetrics] = useState<FileMetric[]>([]);
@@ -281,6 +282,9 @@ const RepositoryView: React.FC = () => {
   return (
     <div className="repository-view">
       <div className="repo-header">
+        <button className="back-button" onClick={() => navigate('/')}>
+          ← Back to Dashboard
+        </button>
         <h1>📊 {repo.name}</h1>
         <div className="repo-info">
           {repo.total_commits !== undefined && <span>📝 {repo.total_commits.toLocaleString()} commits</span>}

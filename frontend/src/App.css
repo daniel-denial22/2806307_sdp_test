@@ -360,6 +360,24 @@ body {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
+.back-button {
+  margin-bottom: 1.25rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #d5d9e2;
+  border-radius: 8px;
+  background: #f7f8fc;
+  color: #5a67d8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.back-button:hover {
+  background: #eef0ff;
+  transform: translateX(-2px);
+}
+
 .repo-header h1 {
   color: #2d3748;
   font-size: 2.5rem;
