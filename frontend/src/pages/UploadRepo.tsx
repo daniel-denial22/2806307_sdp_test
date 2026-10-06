@@ -17,12 +17,14 @@ const UploadRepo: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
       const response = await repoApi.clone(cloneUrl);
-      setSuccess('Repository cloned successfully!');
-      setTimeout(() => navigate('/'), 1000);
+      setSuccess('Repository cloned successfully! Redirecting...');
+      setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to clone repository');
-    } finally {
+      console.error('Clone error:', err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to clone repository';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -34,12 +36,14 @@ const UploadRepo: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
       const response = await repoApi.upload(zipFile);
-      setSuccess('Repository uploaded successfully!');
-      setTimeout(() => navigate('/'), 1000);
+      setSuccess('Repository uploaded successfully! Redirecting...');
+      setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to upload repository');
-    } finally {
+      console.error('Upload error:', err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Failed to upload repository';
+      setError(errorMessage);
       setLoading(false);
     }
   };

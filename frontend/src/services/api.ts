@@ -72,9 +72,11 @@ export const repoApi = {
     });
   },
   clone: (url: string) => {
-    const formData = new FormData();
-    formData.append('url', url);
-    return api.post('/repos/clone', formData);
+    const params = new URLSearchParams();
+    params.append('url', url);
+    return api.post('/repos/clone', params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
   },
   delete: (repoId: string) => api.delete(`/repos/${repoId}`),
 };
