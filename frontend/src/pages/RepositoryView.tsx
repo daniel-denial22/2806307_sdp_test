@@ -8,6 +8,8 @@ import {
   FileMetric,
   DirectoryMetric,
   AuthorMetric,
+  MetricFilters,
+  CommitInfo,
 } from '../services/api';
 
 const RepositoryView: React.FC = () => {
@@ -20,24 +22,31 @@ const RepositoryView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'files' | 'directories' | 'authors'>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<MetricFilters>({});
+  const [draftFrom, setDraftFrom] = useState('');
+  const [draftTo, setDraftTo] = useState('');
+  const [commitPickerOpen, setCommitPickerOpen] = useState(false);
+  const [commits, setCommits] = useState<CommitInfo[]>([]);
+  const [draftCommits, setDraftCommits] = useState<string[]>([]);
+  const [commitSearch, setCommitSearch] = useState('');
 
   useEffect(() => {
     if (repoId) {
-      loadData();
+      loadData({});
     }
   }, [repoId]);
 
-  const loadData = async () => {
+  const loadData = async (f: MetricFilters) => {
     try {
       setLoading(true);
       setError(null);
 
       const [repoRes, metricsRes, filesRes, dirsRes, authorsRes] = await Promise.all([
         repoApi.get(repoId!),
-        metricsApi.getRepository(repoId!),
-        metricsApi.getFiles(repoId!),
-        metricsApi.getDirectories(repoId!),
-        metricsApi.getAuthors(repoId!),
+        metricsApi.getRepository(repoId!, f),
+        metricsApi.getFiles(repoId!, f),
+        metricsApi.getDirectories(repoId!, f),
+        metricsApi.getAuthors(repoId!, f),
       ]);
 
       setRepo(repoRes.data);
@@ -52,6 +61,63 @@ const RepositoryView: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const toUnix = (value: string) =>
+    value ? Math.floor(new Date(value).getTime() / 1000) : undefined;
+
+  const applyFilters = () => {
+    const next: MetricFilters = {
+      start_time: toUnix(draftFrom),
+      end_time: toUnix(draftTo),
+      commits: draftCommits.length ? draftCommits : undefined,
+    };
+    setFilters(next);
+    setCommitPickerOpen(false);
+    loadData(next);
+  };
+
+  const clearFilters = () => {
+    setDraftFrom('');
+    setDraftTo('');
+    setDraftCommits([]);
+    setFilters({});
+    loadData({});
+  };
+
+  const openCommitPicker = async () => {
+    if (!commitPickerOpen && commits.length === 0) {
+      try {
+        const res = await repoApi.commits(repoId!, 1000);
+        setCommits(res.data.commits);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setDraftCommits(filters.commits ?? []);
+    setCommitPickerOpen(!commitPickerOpen);
+  };
+
+  const toggleCommit = (hash: string) => {
+    setDraftCommits((prev) =>
+      prev.includes(hash) ? prev.filter((h) => h !== hash) : [...prev, hash]
+    );
+  };
+
+  const visibleCommits = commits.filter(
+    (c) =>
+      !commitSearch ||
+      c.message.toLowerCase().includes(commitSearch.toLowerCase()) ||
+      c.hash.startsWith(commitSearch) ||
+      c.author.toLowerCase().includes(commitSearch.toLowerCase())
+  );
+
+  const filterSummary = [
+    filters.start_time ? `from ${new Date(filters.start_time * 1000).toLocaleDateString()}` : null,
+    filters.end_time ? `to ${new Date(filters.end_time * 1000).toLocaleDateString()}` : null,
+    filters.commits?.length ? `${filters.commits.length} selected commits` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   if (loading) {
     return <div className="loading"> Loading repository data...</div>;
@@ -71,6 +137,65 @@ const RepositoryView: React.FC = () => {
           {repo.total_authors !== undefined && <span> {repo.total_authors.toLocaleString()} authors</span>}
         </div>
       </div>
+
+      <div className="filter-bar">
+        <div className="filter-group">
+          <label htmlFor="filter-from">From</label>
+          <input
+            id="filter-from"
+            type="datetime-local"
+            value={draftFrom}
+            onChange={(e) => setDraftFrom(e.target.value)}
+          />
+        </div>
+        <div className="filter-group">
+          <label htmlFor="filter-to">To</label>
+          <input
+            id="filter-to"
+            type="datetime-local"
+            value={draftTo}
+            onChange={(e) => setDraftTo(e.target.value)}
+          />
+        </div>
+        <button className="filter-btn" onClick={openCommitPicker}>
+          🔀 Commits{filters.commits?.length ? ` (${filters.commits.length})` : ''}
+        </button>
+        <button className="filter-btn primary" onClick={applyFilters}>Apply</button>
+        <button className="filter-btn" onClick={clearFilters}>Clear</button>
+        {filterSummary && <span className="filter-chip">⚙ {filterSummary}</span>}
+      </div>
+
+      {commitPickerOpen && (
+        <div className="commit-picker">
+          <input
+            className="commit-search"
+            placeholder="Search by message, author or hash..."
+            value={commitSearch}
+            onChange={(e) => setCommitSearch(e.target.value)}
+          />
+          <div className="commit-list">
+            {visibleCommits.map((c) => (
+              <label key={c.hash} className="commit-item">
+                <input
+                  type="checkbox"
+                  checked={draftCommits.includes(c.hash)}
+                  onChange={() => toggleCommit(c.hash)}
+                />
+                <code>{c.hash.slice(0, 8)}</code>
+                <span className="commit-date">
+                  {new Date(c.date * 1000).toLocaleDateString()}
+                </span>
+                <span className="commit-author">{c.author}</span>
+                <span className="commit-msg">{c.message}</span>
+              </label>
+            ))}
+          </div>
+          <div className="commit-picker-actions">
+            <span>{draftCommits.length} selected</span>
+            <button className="filter-btn primary" onClick={applyFilters}>Apply selection</button>
+          </div>
+        </div>
+      )}
 
       <div className="tabs">
         <button
@@ -126,6 +251,10 @@ const RepositoryView: React.FC = () => {
             <div className="metric-card">
               <div className="metric-value">{repoMetrics.churn_rate.toFixed(2)}</div>
               <div className="metric-label">Churn Rate</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-value">{repoMetrics.commit_count.toLocaleString()}</div>
+              <div className="metric-label">Commits in Set</div>
             </div>
           </div>
         </div>

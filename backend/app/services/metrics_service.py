@@ -2,7 +2,6 @@ import git
 import os
 from typing import List, Dict, Optional
 from collections import defaultdict
-from datetime import datetime, timezone
 from app.services.git_service import GitService
 from app.services.cache_service import MetricsCache
 
@@ -70,10 +69,6 @@ class MetricsService:
             pass
         return author, email
 
-    @staticmethod
-    def _ts(value: int) -> str:
-        return datetime.fromtimestamp(value, tz=timezone.utc).isoformat()
-
     # ------------------------------------------------------------------
     # aggregation
     # ------------------------------------------------------------------
@@ -81,13 +76,12 @@ class MetricsService:
     def _aggregate(
         self,
         repo_id: str,
-        commit_hash: Optional[str] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
     ) -> Dict:
         """Single pass over the commit set producing every metric table."""
-        default_set = not (commit_hash or start_time or end_time or commit_hashes)
+        default_set = not (start_time or end_time or commit_hashes)
         if default_set:
             cached = self.cache.get(repo_id, f"bundle_{CACHE_V}")
             if cached:
@@ -95,19 +89,14 @@ class MetricsService:
 
         repo = self.git_service.get_repo(repo_id)
 
-        args: List[str] = []
-        if commit_hash:
-            args.append(commit_hash)
-        else:
-            args.append("--no-merges")
-            if start_time:
-                args += ["--since", self._ts(start_time)]
-            if end_time:
-                args += ["--until", self._ts(end_time)]
-            if commit_hashes:
-                args += list(commit_hashes)
-
-        pretty = "--pretty=format:\x1f%H\x1f%an\x1f%ae"
+        args: List[str] = ["--no-merges"]
+        if commit_hashes:
+            # A manually selected set is exactly the listed commits,
+            # not their ancestry.
+            args += ["--no-walk"] + list(commit_hashes)
+        # Time bounds are enforced in the parser below so the set matches
+        # H_i,j = {h | i <= h[committer-date] < j} exactly.
+        pretty = "--pretty=format:\x1f%H\x1f%an\x1f%ae\x1f%ct"
         raw = repo.git.log(*args, "--numstat", pretty)
 
         files: Dict[str, Dict] = defaultdict(lambda: {"added": 0, "removed": 0, "modifications": 0})
@@ -137,7 +126,13 @@ class MetricsService:
         for line in raw.split("\n"):
             if line.startswith("\x1f"):
                 flush_commit()
-                _, _sha, name, email = line.split("\x1f")
+                _, _sha, name, email, ct_s = line.split("\x1f")
+                ct = int(ct_s)
+                if (start_time is not None and ct < start_time) or (
+                    end_time is not None and ct >= end_time
+                ):
+                    current = None  # commit outside the requested set
+                    continue
                 name, email = self._apply_mailmap(repo, name, email)
                 current = f"{name} <{email}>"
                 commit_count += 1
@@ -257,21 +252,45 @@ class MetricsService:
     # public API
     # ------------------------------------------------------------------
 
-    def get_file_metrics(self, repo_id: str, commit_hash: Optional[str] = None) -> List[Dict]:
+    def get_file_metrics(
+        self,
+        repo_id: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        commit_hashes: Optional[List[str]] = None,
+    ) -> List[Dict]:
         """Get metrics for all files"""
-        return self._aggregate(repo_id, commit_hash)["files"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["files"]
 
-    def get_directory_metrics(self, repo_id: str, commit_hash: Optional[str] = None) -> List[Dict]:
+    def get_directory_metrics(
+        self,
+        repo_id: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        commit_hashes: Optional[List[str]] = None,
+    ) -> List[Dict]:
         """Get metrics for all directories"""
-        return self._aggregate(repo_id, commit_hash)["directories"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["directories"]
 
-    def get_repository_metrics(self, repo_id: str, commit_hash: Optional[str] = None) -> Dict:
+    def get_repository_metrics(
+        self,
+        repo_id: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        commit_hashes: Optional[List[str]] = None,
+    ) -> Dict:
         """Get metrics for the entire repository"""
-        return self._aggregate(repo_id, commit_hash)["repository"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["repository"]
 
-    def get_author_metrics(self, repo_id: str, commit_hash: Optional[str] = None) -> List[Dict]:
+    def get_author_metrics(
+        self,
+        repo_id: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        commit_hashes: Optional[List[str]] = None,
+    ) -> List[Dict]:
         """Get metrics for all authors"""
-        return self._aggregate(repo_id, commit_hash)["authors"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes)["authors"]
 
     def get_commit_set_metrics(
         self,
@@ -281,5 +300,5 @@ class MetricsService:
         commit_hashes: Optional[List[str]] = None,
     ) -> Dict:
         """Get metrics for a specific commit set"""
-        repo_row = self._aggregate(repo_id, None, start_time, end_time, commit_hashes)["repository"]
+        repo_row = self._aggregate(repo_id, start_time, end_time, commit_hashes)["repository"]
         return {**repo_row, "files_modified": repo_row["total_files"]}

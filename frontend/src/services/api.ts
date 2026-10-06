@@ -74,6 +74,26 @@ export interface CommitSetMetrics {
   modification_frequency: number;
 }
 
+export interface CommitInfo {
+  hash: string;
+  author: string;
+  email: string;
+  date: number;
+  message: string;
+}
+
+export interface MetricFilters {
+  start_time?: number;
+  end_time?: number;
+  commits?: string[];
+}
+
+const filterParams = (f?: MetricFilters) => ({
+  start_time: f?.start_time,
+  end_time: f?.end_time,
+  commit_hashes: f?.commits?.length ? f.commits.join(',') : undefined,
+});
+
 // Repository APIs
 export const repoApi = {
   list: () => api.get<{ repositories: Repository[] }>('/repos/'),
@@ -93,37 +113,32 @@ export const repoApi = {
     });
   },
   delete: (repoId: string) => api.delete(`/repos/${repoId}`),
+  commits: (repoId: string, limit = 1000) =>
+    api.get<{ commits: CommitInfo[] }>(`/repos/${repoId}/commits`, {
+      params: { limit },
+    }),
 };
 
 // Metrics APIs
 export const metricsApi = {
-  getFiles: (repoId: string, commitHash?: string) =>
+  getFiles: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: FileMetric[] }>(`/metrics/${repoId}/files`, {
-      params: { commit_hash: commitHash },
+      params: filterParams(filters),
     }),
-  getDirectories: (repoId: string, commitHash?: string) =>
+  getDirectories: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: DirectoryMetric[] }>(`/metrics/${repoId}/directories`, {
-      params: { commit_hash: commitHash },
+      params: filterParams(filters),
     }),
-  getRepository: (repoId: string, commitHash?: string) =>
+  getRepository: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: RepositoryMetrics }>(`/metrics/${repoId}/repository`, {
-      params: { commit_hash: commitHash },
+      params: filterParams(filters),
     }),
-  getAuthors: (repoId: string, commitHash?: string) =>
+  getAuthors: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: AuthorMetric[] }>(`/metrics/${repoId}/authors`, {
-      params: { commit_hash: commitHash },
+      params: filterParams(filters),
     }),
-  getCommitSet: (
-    repoId: string,
-    startTime?: number,
-    endTime?: number,
-    commitHashes?: string[]
-  ) =>
+  getCommitSet: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: CommitSetMetrics }>(`/metrics/${repoId}/commits`, {
-      params: {
-        start_time: startTime,
-        end_time: endTime,
-        commit_hashes: commitHashes?.join(','),
-      },
+      params: filterParams(filters),
     }),
 };

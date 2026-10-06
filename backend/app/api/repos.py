@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Query
 from fastapi.responses import JSONResponse
 from app.services.git_service import GitService
 import shutil
@@ -45,6 +45,18 @@ async def get_repository(repo_id: str):
     if not repo_info:
         raise HTTPException(status_code=404, detail="Repository not found")
     return repo_info
+
+@router.get("/{repo_id}/commits")
+async def list_commits(
+    repo_id: str,
+    limit: int = Query(1000, ge=1, le=100000),
+):
+    """List non-merge commits for manual commit-set selection"""
+    try:
+        git_service = GitService()
+        return {"commits": git_service.list_commits(repo_id, limit)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{repo_id}")
 async def delete_repository(repo_id: str):

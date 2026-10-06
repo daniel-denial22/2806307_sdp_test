@@ -122,3 +122,25 @@ class GitService:
         if not os.path.exists(repo_path):
             raise ValueError("Repository not found")
         return git.Repo(repo_path)
+
+    def list_commits(self, repo_id: str, limit: int = 1000) -> List[Dict]:
+        """List non-merge commits (newest first) for manual commit-set selection"""
+        repo = self.get_repo(repo_id)
+        raw = repo.git.log(
+            "--no-merges",
+            "-n", str(limit),
+            "--pretty=format:\x1f%H\x1f%an\x1f%ae\x1f%ct\x1f%s",
+        )
+        commits = []
+        for line in raw.split("\n"):
+            if not line.startswith("\x1f"):
+                continue
+            _, sha, name, email, ct, subject = line.split("\x1f", 5)
+            commits.append({
+                "hash": sha,
+                "author": name,
+                "email": email,
+                "date": int(ct),
+                "message": subject,
+            })
+        return commits
