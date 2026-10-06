@@ -14,27 +14,35 @@ class MetricsService:
         stats = {}
         
         if not commit.parents:
-            # Initial commit
-            diff = commit.diff(git.NULL_TREE)
+            # Initial commit - use git diff-tree
+            diff_text = repo.git.diff_tree('--root', '-r', '--numstat', commit.hexsha)
         else:
-            diff = commit.parents[0].diff(commit)
+            # Regular commit
+            diff_text = repo.git.diff_tree('-r', '--numstat', commit.parents[0].hexsha, commit.hexsha)
         
-        for d in diff:
-            if d.a_blob and d.a_blob.path.endswith(('.png', '.jpg', '.gif', '.ico', '.pdf', '.exe', '.bin')):
-                continue  # Skip binary files
+        # Parse numstat output: added\tremoved\tpath
+        for line in diff_text.split('\n'):
+            if not line.strip():
+                continue
+            parts = line.split('\t')
+            if len(parts) != 3:
+                continue
             
-            path = d.b_blob.path if d.b_blob else d.a_blob.path
+            added_str, removed_str, path = parts
+            
+            # Skip binary files (shown as '-' in numstat)
+            if added_str == '-' or removed_str == '-':
+                continue
+            
+            # Skip binary file extensions
+            if path.endswith(('.png', '.jpg', '.gif', '.ico', '.pdf', '.exe', '.bin')):
+                continue
             
             if path not in stats:
                 stats[path] = {'added': 0, 'removed': 0}
             
-            # Count line changes
-            diff_text = d.diff if isinstance(d.diff, str) else d.diff.decode('utf-8', errors='ignore')
-            for line in diff_text.split('\n'):
-                if line.startswith('+') and not line.startswith('+++'):
-                    stats[path]['added'] += 1
-                elif line.startswith('-') and not line.startswith('---'):
-                    stats[path]['removed'] += 1
+            stats[path]['added'] += int(added_str)
+            stats[path]['removed'] += int(removed_str)
         
         return stats
 
