@@ -30,17 +30,26 @@ class GitService:
             with zipfile.ZipFile(temp_zip.name, 'r') as zip_ref:
                 zip_ref.extractall(repo_path)
             
-            # Find .git directory
+            # Find .git directory (or file, e.g. worktree/submodule)
             git_dir = None
             for root, dirs, files in os.walk(repo_path):
-                if '.git' in dirs:
+                if '.git' in dirs or '.git' in files:
                     git_dir = os.path.join(root, '.git')
                     break
-            
+
             if not git_dir:
                 shutil.rmtree(repo_path)
                 raise ValueError("No .git directory found in ZIP file")
-            
+
+            # ZIPs usually wrap the repo in a top-level folder; promote the
+            # folder that actually holds .git to be the repository root.
+            repo_root = os.path.dirname(git_dir)
+            if os.path.abspath(repo_root) != os.path.abspath(repo_path):
+                staged = repo_path + ".staged"
+                os.rename(repo_root, staged)
+                shutil.rmtree(repo_path)
+                os.rename(staged, repo_path)
+
             return repo_id
         finally:
             os.unlink(temp_zip.name)

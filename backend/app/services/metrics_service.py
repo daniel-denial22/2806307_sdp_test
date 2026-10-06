@@ -1,13 +1,20 @@
 import git
 import os
 from typing import List, Dict, Optional
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from app.services.git_service import GitService
 from app.services.cache_service import MetricsCache
 
 # Bump this suffix whenever the aggregation semantics change so stale
 # cache entries from older versions are ignored.
 CACHE_V = "v2"
+
+MERGE_METRIC = "author_merge"
+
+# In-process memo for non-default (filtered) bundles so repeated or
+# toggled-back filter queries don't re-scan the whole repository.
+_MEMO: "OrderedDict[tuple, Dict]" = OrderedDict()
+_MEMO_MAX = 16
 
 
 class MetricsService:
@@ -80,13 +87,23 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        scope_path: Optional[str] = None,
     ) -> Dict:
         """Single pass over the commit set producing every metric table."""
-        default_set = not (start_time or end_time or commit_hashes or author)
+        if scope_path in ("", "/"):
+            scope_path = None
+        merges = self._load_merges(repo_id)
+        if author and author in merges:
+            author = merges[author]
+        default_set = not (start_time or end_time or commit_hashes or author or scope_path)
+        sig = (repo_id, start_time, end_time, tuple(commit_hashes or ()), author, scope_path)
         if default_set:
             cached = self.cache.get(repo_id, f"bundle_{CACHE_V}")
             if cached:
                 return cached
+        elif sig in _MEMO:
+            _MEMO.move_to_end(sig)
+            return _MEMO[sig]
 
         repo = self.git_service.get_repo(repo_id)
 
@@ -136,6 +153,7 @@ class MetricsService:
                     continue
                 name, email = self._apply_mailmap(repo, name, email)
                 key = f"{name} <{email}>"
+                key = merges.get(key, key)
                 if author is not None and key != author:
                     current = None  # commit by another author
                     continue
@@ -152,6 +170,12 @@ class MetricsService:
                 continue  # binary file
             added, removed = int(added_str), int(removed_str)
             path = self._resolve_path(raw_path)
+
+            # When scoped to a file/directory, ignore everything outside it
+            if scope_path is not None and not (
+                path == scope_path or path.startswith(scope_path + "/")
+            ):
+                continue
 
             f = files[path]
             f["added"] += added
@@ -189,8 +213,24 @@ class MetricsService:
                     break
                 dir_path = os.path.dirname(dir_path)
 
-        repo_agg["added"] = dirs["/"]["added"] if "/" in dirs else 0
-        repo_agg["removed"] = dirs["/"]["removed"] if "/" in dirs else 0
+        if scope_path is not None:
+            files = {
+                p: f for p, f in files.items()
+                if p == scope_path or p.startswith(scope_path + "/")
+            }
+            dirs = {
+                p: d for p, d in dirs.items()
+                if p == scope_path or p.startswith(scope_path + "/")
+            }
+
+        if scope_path is not None and scope_path in files and scope_path not in dirs:
+            # Scoped to a single file: the repository row is that file
+            repo_agg["added"] = files[scope_path]["added"]
+            repo_agg["removed"] = files[scope_path]["removed"]
+        else:
+            root_key = "/" if scope_path is None else scope_path
+            repo_agg["added"] = dirs[root_key]["added"] if root_key in dirs else 0
+            repo_agg["removed"] = dirs[root_key]["removed"] if root_key in dirs else 0
         repo_churn = repo_agg["added"] + repo_agg["removed"]
 
         def rates(churn: int, modifications: int) -> Dict:
@@ -212,8 +252,10 @@ class MetricsService:
             }
 
         file_rows = [row(p, files[p]) for p in sorted(files)]
-        # The root "/" is reported as the repository object, not a directory
-        dir_rows = [row(p, dirs[p]) for p in sorted(dirs) if p != "/"]
+        # The scoped root ("/" unscoped, or the requested path) is reported
+        # as the repository object, not a directory row
+        root_row_path = "/" if scope_path is None else scope_path
+        dir_rows = [row(p, dirs[p]) for p in sorted(dirs) if p != root_row_path]
         repository_row = {
             **row("/", repo_agg),
             "commit_count": commit_count,
@@ -251,11 +293,58 @@ class MetricsService:
         }
         if default_set:
             self.cache.set(repo_id, f"bundle_{CACHE_V}", bundle)
+        else:
+            _MEMO[sig] = bundle
+            _MEMO.move_to_end(sig)
+            while len(_MEMO) > _MEMO_MAX:
+                _MEMO.popitem(last=False)
         return bundle
+
+    # ------------------------------------------------------------------
+    # author merging
+    # ------------------------------------------------------------------
+
+    def _load_merges(self, repo_id: str) -> Dict[str, str]:
+        return self.cache.get(repo_id, MERGE_METRIC) or {}
+
+    def get_author_merges(self, repo_id: str) -> Dict[str, str]:
+        return self._load_merges(repo_id)
+
+    def add_author_merge(self, repo_id: str, source: str, canonical: str) -> Dict[str, str]:
+        merges = self._load_merges(repo_id)
+        merges[source] = canonical
+        self.cache.set(repo_id, MERGE_METRIC, merges)
+        self._invalidate_compute(repo_id)
+        return merges
+
+    def remove_author_merge(self, repo_id: str, source: str) -> Dict[str, str]:
+        merges = self._load_merges(repo_id)
+        merges.pop(source, None)
+        self.cache.set(repo_id, MERGE_METRIC, merges)
+        self._invalidate_compute(repo_id)
+        return merges
+
+    def _invalidate_compute(self, repo_id: str):
+        """Drop cached/memoised bundles so merges take effect immediately."""
+        self.cache.delete(repo_id, f"bundle_{CACHE_V}")
+        for key in [k for k in _MEMO if k[0] == repo_id]:
+            _MEMO.pop(key, None)
 
     # ------------------------------------------------------------------
     # public API
     # ------------------------------------------------------------------
+
+    def get_bundle(
+        self,
+        repo_id: str,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        commit_hashes: Optional[List[str]] = None,
+        author: Optional[str] = None,
+        path: Optional[str] = None,
+    ) -> Dict:
+        """All metric tables from a single aggregation pass."""
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)
 
     def get_file_metrics(
         self,
@@ -264,9 +353,10 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        path: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all files"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["files"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)["files"]
 
     def get_directory_metrics(
         self,
@@ -275,9 +365,10 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        path: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all directories"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["directories"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)["directories"]
 
     def get_repository_metrics(
         self,
@@ -286,9 +377,10 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        path: Optional[str] = None,
     ) -> Dict:
         """Get metrics for the entire repository"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["repository"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)["repository"]
 
     def get_author_metrics(
         self,
@@ -297,9 +389,10 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        path: Optional[str] = None,
     ) -> List[Dict]:
         """Get metrics for all authors"""
-        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["authors"]
+        return self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)["authors"]
 
     def get_commit_set_metrics(
         self,
@@ -308,7 +401,8 @@ class MetricsService:
         end_time: Optional[int] = None,
         commit_hashes: Optional[List[str]] = None,
         author: Optional[str] = None,
+        path: Optional[str] = None,
     ) -> Dict:
         """Get metrics for a specific commit set"""
-        repo_row = self._aggregate(repo_id, start_time, end_time, commit_hashes, author)["repository"]
+        repo_row = self._aggregate(repo_id, start_time, end_time, commit_hashes, author, path)["repository"]
         return {**repo_row, "files_modified": repo_row["total_files"]}

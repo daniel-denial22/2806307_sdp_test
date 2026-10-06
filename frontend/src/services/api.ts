@@ -82,11 +82,19 @@ export interface CommitInfo {
   message: string;
 }
 
+export interface MetricsBundle {
+  files: FileMetric[];
+  directories: DirectoryMetric[];
+  repository: RepositoryMetrics;
+  authors: AuthorMetric[];
+}
+
 export interface MetricFilters {
   start_time?: number;
   end_time?: number;
   commits?: string[];
   author?: string;
+  path?: string;
 }
 
 const filterParams = (f?: MetricFilters) => ({
@@ -94,6 +102,7 @@ const filterParams = (f?: MetricFilters) => ({
   end_time: f?.end_time,
   commit_hashes: f?.commits?.length ? f.commits.join(',') : undefined,
   author: f?.author,
+  path: f?.path,
 });
 
 // Repository APIs
@@ -119,10 +128,30 @@ export const repoApi = {
     api.get<{ commits: CommitInfo[] }>(`/repos/${repoId}/commits`, {
       params: { limit },
     }),
+  getMerges: (repoId: string) =>
+    api.get<{ merges: Record<string, string> }>(`/repos/${repoId}/author-merges`),
+  addMerge: (repoId: string, source: string, canonical: string) => {
+    const params = new URLSearchParams();
+    params.append('source', source);
+    params.append('canonical', canonical);
+    return api.post<{ merges: Record<string, string> }>(
+      `/repos/${repoId}/author-merges`,
+      params,
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+  },
+  removeMerge: (repoId: string, source: string) =>
+    api.delete<{ merges: Record<string, string> }>(`/repos/${repoId}/author-merges`, {
+      params: { source },
+    }),
 };
 
 // Metrics APIs
 export const metricsApi = {
+  getBundle: (repoId: string, filters?: MetricFilters) =>
+    api.get<MetricsBundle>(`/metrics/${repoId}/bundle`, {
+      params: filterParams(filters),
+    }),
   getFiles: (repoId: string, filters?: MetricFilters) =>
     api.get<{ metrics: FileMetric[] }>(`/metrics/${repoId}/files`, {
       params: filterParams(filters),

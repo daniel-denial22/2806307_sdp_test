@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Query
 from fastapi.responses import JSONResponse
 from app.services.git_service import GitService
+from app.services.metrics_service import MetricsService
 import shutil
 import os
 
@@ -57,6 +58,32 @@ async def list_commits(
         return {"commits": git_service.list_commits(repo_id, limit)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/{repo_id}/author-merges")
+async def get_author_merges(repo_id: str):
+    """Current manual author-merge map (source identity -> canonical)."""
+    return {"merges": MetricsService().get_author_merges(repo_id)}
+
+@router.post("/{repo_id}/author-merges")
+async def add_author_merge(
+    repo_id: str,
+    source: str = Form(...),
+    canonical: str = Form(...),
+):
+    """Merge one author identity into a canonical one."""
+    if not source.strip() or not canonical.strip() or source == canonical:
+        raise HTTPException(status_code=400, detail="source and canonical must be different")
+    merges = MetricsService().add_author_merge(repo_id, source.strip(), canonical.strip())
+    return {"merges": merges}
+
+@router.delete("/{repo_id}/author-merges")
+async def remove_author_merge(
+    repo_id: str,
+    source: str = Query(...),
+):
+    """Remove a manual author-merge rule."""
+    merges = MetricsService().remove_author_merge(repo_id, source)
+    return {"merges": merges}
 
 @router.delete("/{repo_id}")
 async def delete_repository(repo_id: str):

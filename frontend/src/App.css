@@ -93,6 +93,35 @@ body {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.dashboard-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  color: #4a5568;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-tools label {
+  font-weight: 600;
+}
+
+.dashboard-tools input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.dashboard-tools span {
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
 .repo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -125,6 +154,32 @@ body {
   font-size: 1.5rem;
   margin-bottom: 1rem;
   font-weight: 600;
+}
+
+.repo-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.repo-delete-btn {
+  border: 1px solid #feb2b2;
+  border-radius: 7px;
+  background: #fff5f5;
+  color: #c53030;
+  padding: 0.4rem 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.repo-delete-btn:hover:not(:disabled) {
+  background: #fed7d7;
+}
+
+.repo-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .repo-stats {
@@ -497,6 +552,16 @@ body {
   .tabs {
     flex-direction: column;
   }
+
+  .ownership-chart {
+    flex-direction: column;
+  }
+
+  .ownership-pie,
+  .ownership-legend {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* Commit-set filter bar */
@@ -535,6 +600,29 @@ body {
   max-width: 280px;
 }
 
+.path-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.path-input-wrap input {
+  padding-right: 2rem;
+}
+
+.path-input-wrap input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+
+.path-chevron {
+  position: absolute;
+  right: 0.7rem;
+  color: #4a5568;
+  font-size: 0.9rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .filter-btn {
   padding: 0.55rem 1.1rem;
   border: 1px solid #d5d9e2;
@@ -568,6 +656,16 @@ body {
   padding: 0.35rem 0.9rem;
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.filter-chip.refreshing {
+  background: #fff4e5;
+  color: #b26a00;
+}
+
+.filter-chip.error-chip {
+  background: #fdecec;
+  color: #c0392b;
 }
 
 .commit-picker {
@@ -637,4 +735,148 @@ body {
   margin-top: 0.75rem;
   font-size: 0.85rem;
   color: #666;
+}
+
+/* Charts */
+.charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.chart-card {
+  background: #f8f9fd;
+  border: 1px solid #e6e8f2;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 0;
+}
+
+.chart-card h3 {
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.chart-empty {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #718096;
+}
+
+.chart-empty h3 {
+  margin-bottom: 0.5rem;
+}
+
+.ownership-chart {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 280px;
+}
+
+.ownership-pie {
+  flex: 1 1 55%;
+  min-width: 220px;
+}
+
+.ownership-legend {
+  flex: 1 1 45%;
+  min-width: 180px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ownership-legend li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a5568;
+  font-size: 0.85rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownership-legend strong {
+  color: #2d3748;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Author merge panel */
+.merge-panel {
+  background: #f8f9fd;
+  border: 1px solid #e6e8f2;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.merge-panel h3 {
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.merge-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.merge-controls select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d5d9e2;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  max-width: 320px;
+}
+
+.merge-controls span {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.merge-list {
+  list-style: none;
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.merge-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.merge-list code {
+  color: #764ba2;
+  background: #eef0ff;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
 }

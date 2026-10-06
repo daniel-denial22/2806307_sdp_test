@@ -18,7 +18,7 @@ const UploadRepo: React.FC = () => {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      const response = await repoApi.clone(cloneUrl);
+      await repoApi.clone(cloneUrl);
       setSuccess('✅ Repository cloned successfully! Redirecting...');
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
@@ -37,7 +37,7 @@ const UploadRepo: React.FC = () => {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      const response = await repoApi.upload(zipFile);
+      await repoApi.upload(zipFile);
       setSuccess('✅ Repository uploaded successfully! Redirecting...');
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {

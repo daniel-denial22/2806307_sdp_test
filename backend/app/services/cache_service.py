@@ -30,6 +30,14 @@ class MetricsCache:
         except:
             pass
 
+    def delete(self, repo_id: str, metric_type: str):
+        cache_path = self._get_cache_path(repo_id, metric_type)
+        if os.path.exists(cache_path):
+            try:
+                os.remove(cache_path)
+            except OSError:
+                pass
+
     def invalidate(self, repo_id: str):
         """Clear all cached metrics for a repository"""
         for file in os.listdir(self.cache_dir):
