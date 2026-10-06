@@ -12,10 +12,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  width: 100%;
+  display: block;
 }
 
 .app {
   min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar {
@@ -29,7 +34,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  max-width: 100%;
+  width: 100%;
 }
 
 .nav-brand {
@@ -67,9 +72,11 @@ body {
 }
 
 .main-content {
-  padding: 3rem 4rem;
-  max-width: 1800px;
-  margin: 0 auto;
+  padding: 2.5rem 3rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  flex: 1;
 }
 
 /* Dashboard Styles */
@@ -88,10 +95,9 @@ body {
 
 .repo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .repo-card {
@@ -156,15 +162,24 @@ body {
 
 /* Upload Page Styles */
 .upload-page {
-  max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+.upload-page .error-message,
+.upload-page .success-message {
+  grid-column: 1 / -1;
 }
 
 .upload-page h1 {
+  grid-column: 1 / -1;
   color: white;
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -172,7 +187,7 @@ body {
   background: white;
   border-radius: 16px;
   padding: 2.5rem;
-  margin-bottom: 2rem;
+  width: 100%;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
@@ -315,6 +330,8 @@ body {
   border-radius: 16px;
   padding: 3rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  overflow-x: auto;
 }
 
 .metrics-section h2 {
@@ -444,6 +461,12 @@ body {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .upload-page {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .navbar {
     flex-direction: column;

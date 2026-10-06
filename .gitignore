@@ -25,6 +25,7 @@ wheels/
 
 # Backend specific
 backend/repos/
+backend/cache/
 backend/.env
 
 # Node

@@ -123,6 +123,10 @@ const RepositoryView: React.FC = () => {
               <div className="metric-value">{repoMetrics.total_files.toLocaleString()}</div>
               <div className="metric-label">Files Modified</div>
             </div>
+            <div className="metric-card">
+              <div className="metric-value">{repoMetrics.churn_rate.toFixed(2)}</div>
+              <div className="metric-label">Churn Rate</div>
+            </div>
           </div>
         </div>
       )}
@@ -138,6 +142,7 @@ const RepositoryView: React.FC = () => {
                 <th>Removed</th>
                 <th>Growth</th>
                 <th>Churn</th>
+                <th>Modifications</th>
               </tr>
             </thead>
             <tbody>
@@ -148,6 +153,7 @@ const RepositoryView: React.FC = () => {
                   <td>{file.removed_lines.toLocaleString()}</td>
                   <td>{file.growth.toLocaleString()}</td>
                   <td>{file.churn.toLocaleString()}</td>
+                  <td>{file.modifications.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -166,6 +172,7 @@ const RepositoryView: React.FC = () => {
                 <th>Removed</th>
                 <th>Growth</th>
                 <th>Churn</th>
+                <th>Modifications</th>
               </tr>
             </thead>
             <tbody>
@@ -176,6 +183,7 @@ const RepositoryView: React.FC = () => {
                   <td>{dir.removed_lines.toLocaleString()}</td>
                   <td>{dir.growth.toLocaleString()}</td>
                   <td>{dir.churn.toLocaleString()}</td>
+                  <td>{dir.modifications.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -191,8 +199,11 @@ const RepositoryView: React.FC = () => {
               <tr>
                 <th>Author</th>
                 <th>Email</th>
+                <th>Added</th>
+                <th>Removed</th>
                 <th>Modifications</th>
                 <th>Churn</th>
+                <th>Ownership</th>
               </tr>
             </thead>
             <tbody>
@@ -200,8 +211,11 @@ const RepositoryView: React.FC = () => {
                 <tr key={author.email}>
                   <td>{author.author}</td>
                   <td>{author.email}</td>
+                  <td>{author.added_lines.toLocaleString()}</td>
+                  <td>{author.removed_lines.toLocaleString()}</td>
                   <td>{author.modifications.toLocaleString()}</td>
                   <td>{author.churn.toLocaleString()}</td>
+                  <td>{(author.ownership * 100).toFixed(2)}%</td>
                 </tr>
               ))}
             </tbody>

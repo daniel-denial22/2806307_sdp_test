@@ -85,7 +85,9 @@ class GitService:
         try:
             repo = git.Repo(repo_path)
             commits = list(repo.iter_commits('HEAD'))
-            authors = set(c.author.email for c in commits)
+            # Merge commits are excluded from the analysed commit set
+            non_merge = [c for c in commits if len(c.parents) <= 1]
+            authors = set(f"{c.author.name} <{c.author.email}" for c in non_merge)
             
             # Count files
             files = []
@@ -97,7 +99,7 @@ class GitService:
                 "id": repo_id,
                 "name": os.path.basename(repo.remotes.origin.url) if repo.remotes else repo_id,
                 "path": repo_path,
-                "total_commits": len(commits),
+                "total_commits": len(non_merge),
                 "total_files": len(files),
                 "total_authors": len(authors),
             }

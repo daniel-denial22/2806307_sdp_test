@@ -24,6 +24,9 @@ export interface FileMetric {
   removed_lines: number;
   growth: number;
   churn: number;
+  modifications: number;
+  modification_frequency: number;
+  churn_rate: number;
 }
 
 export interface DirectoryMetric {
@@ -32,14 +35,21 @@ export interface DirectoryMetric {
   removed_lines: number;
   growth: number;
   churn: number;
+  modifications: number;
+  modification_frequency: number;
+  churn_rate: number;
 }
 
 export interface AuthorMetric {
   author: string;
   email: string;
+  added_lines: number;
+  removed_lines: number;
+  growth: number;
   modifications: number;
   churn: number;
-  ownership: Record<string, number>;
+  ownership: number;
+  file_ownership: Record<string, number>;
 }
 
 export interface RepositoryMetrics {
@@ -47,6 +57,10 @@ export interface RepositoryMetrics {
   removed_lines: number;
   growth: number;
   churn: number;
+  modifications: number;
+  modification_frequency: number;
+  churn_rate: number;
+  commit_count: number;
   total_files: number;
 }
 
